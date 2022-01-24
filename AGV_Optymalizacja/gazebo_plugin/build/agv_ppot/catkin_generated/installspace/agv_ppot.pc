@@ -1,0 +1,8 @@
+prefix=/home/greg/git/Smart-Factory/Smart_Factory_projekt/gazebo_plugin/install
+
+Name: agv_ppot
+Description: Description of agv_ppot
+Version: 0.0.0
+Cflags: 
+Libs: -L${prefix}/lib 
+Requires: 

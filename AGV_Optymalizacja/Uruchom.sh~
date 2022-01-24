@@ -1,0 +1,5 @@
+#!/bin/bash
+
+cd gazebo_plugin
+export TURTLEBOT3_MODEL=waffle_pi
+roslaunch agv_ppot turtlebot3_AGV_PPot.launch

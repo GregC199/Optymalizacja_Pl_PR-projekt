@@ -1,0 +1,38 @@
+<launch>
+  <arg name="model" default="$(env TURTLEBOT3_MODEL)" doc="model type [burger, waffle, waffle_pi]"/>
+  <arg name="x_pos" default="0.0"/>
+  <arg name="y_pos" default="0.0"/>
+  <arg name="z_pos" default="0.0"/>
+	
+  <include file="$(find gazebo_ros)/launch/empty_world.launch">
+    <arg name="world_name" value="/home/greg/git/Smart-Factory/Smart_Factory_projekt/gazebo_plugin/src/agv_ppot/plansza/Pusta_plansza.world"/>
+    <arg name="paused" value="false"/>
+    <arg name="use_sim_time" value="true"/>
+    <arg name="gui" value="true"/>
+    <arg name="headless" value="false"/>
+    <arg name="debug" value="false"/>
+  </include>
+
+  <param name="robot_description" command="$(find xacro)/xacro --inorder $(find turtlebot3_description)/urdf/turtlebot3_$(arg model).urdf.xacro" />
+
+  <node pkg="gazebo_ros" type="spawn_model" name="spawn_urdf" args="-urdf -model robot_lidar_plaski -x $(arg x_pos) -y $(arg y_pos) -z $(arg z_pos) -param robot_description" />
+  <node pkg="agv_ppot" name="PPot" type="PPot.py">
+    <param name="x_Goal" value="0.0" />   
+    <param name="y_Goal" value="0.0"/>
+
+    <param name="K_att" value="20" />   
+    <param name="K_rep" value="1" /> 
+
+    <param name="sampling_time" value="0.1" /> 
+    <param name="rob_mass" value="1.8" /> 
+   </node>
+
+  <node pkg="agv_ppot" name="Lapunov" type="Lapunov.py">
+    <param name="K_x" value="0.5" />   
+    <param name="K_theta" value="1.5" />
+    <param name="Vd_des" value="0.0001" />   
+    <param name="Omega_des" value="0.00" />
+  </node>
+  <node pkg="agv_ppot" name="AGVInterfejsApp" type="AGVInterfejsApp.py">
+  </node>
+</launch>
