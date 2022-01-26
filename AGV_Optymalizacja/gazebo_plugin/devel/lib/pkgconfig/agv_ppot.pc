@@ -1,0 +1,8 @@
+prefix=/home/greg/git/Optymalizacja_Pl_PR-projekt/AGV_Optymalizacja/gazebo_plugin/devel
+
+Name: agv_ppot
+Description: Description of agv_ppot
+Version: 0.0.0
+Cflags: 
+Libs: -L${prefix}/lib 
+Requires: 
