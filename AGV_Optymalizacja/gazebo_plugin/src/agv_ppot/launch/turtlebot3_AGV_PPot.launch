@@ -20,7 +20,7 @@
     <param name="x_Goal" value="0.0" />   
     <param name="y_Goal" value="0.0"/>
 
-    <param name="K_att" value="20" />   
+    <param name="K_att" value="60" />   
     <param name="K_rep" value="1" /> 
 
     <param name="sampling_time" value="0.1" /> 

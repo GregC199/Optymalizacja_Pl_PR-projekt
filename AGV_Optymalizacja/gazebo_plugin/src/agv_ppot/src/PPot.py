@@ -9,11 +9,14 @@ import math
 import sympy as sym
 from sympy import *
 from std_msgs.msg._Float64MultiArray import Float64MultiArray
+from setuptools.command import rotate
+from tensorflow.lite.python.schema_py_generated import AbsOptionsStart
+import time
 #########################################################################################################
 
 
 #########################################################################################################
-
+global next_move  #iterator do list kolejnych 
 #######################################################################
 #Initialize ROS node
 rospy.init_node('Path_Planning_PPot', anonymous=True) #Node Path planning "Pola Potencjalne" (eng. potential field)
@@ -43,6 +46,184 @@ dnonlimit=1.5 # Increased speed distance
 
 
 #######################################################################
+
+class Node():
+    """A node class for A* Pathfinding"""
+
+    def __init__(self, parent=None, position=None):
+        self.parent = parent
+        self.position = position
+
+        self.g = 0
+        self.h = 0
+        self.f = 0
+
+    def __eq__(self, other):
+        return self.position == other.position
+
+def rotPath(p, origin=(0, 0), degrees=0):
+    angle = np.deg2rad(degrees)
+    R = np.array([[np.cos(angle), -np.sin(angle)],[np.sin(angle),  np.cos(angle)]])
+    o = np.atleast_2d(origin)
+    p = np.atleast_2d(p)
+    return np.squeeze((R @ (p.T-o.T) + o.T).T)
+
+def astar(start2, end2):
+    """Returns a list of tuples as a path from the given start to the given end in the given maze"""
+    
+    start1 = (int(start2[0]),int(start2[0]))
+    end1 = (int(end2[0]),int(end2[1]))
+    print("start1 funkcja",start1, "end funkcja",end1)
+    
+    maze = [[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0],
+            [0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0],
+            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+            [0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0],
+            [0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+            [0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0],
+            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+            [0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+            [0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0],
+            [0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0],
+            [0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+            [0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+            [0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]]
+    
+    helper_num = 10
+
+    end_temp = [0,0]
+    start_temp = [0,0]
+    if end1[0] < 0 and end1[1] < 0:
+        print("1")
+        end_temp[0] = (end1[0] + helper_num)
+        end_temp[1] = end1[1] + helper_num
+    elif end1[0] > 0 and end1[1] > 0:
+        print("2")
+        end_temp[0] = end1[0] + helper_num
+        end_temp[1] = end1[1] + helper_num        
+    elif end1[0] > 0 and end1[1] < 0:
+        print("3")
+        end_temp[1] = (end1[1] - helper_num)*-1
+        end_temp[0] = (end1[0] - helper_num)*-1
+    elif end1[0] < 0 and end1[1] > 0:
+        print("4")
+        end_temp[0] = (end1[0] - helper_num)*-1
+        end_temp[1] = end1[1] - helper_num
+    elif end1[0] == 0 and end1[1] == 0:
+        end_temp[0] = 10
+        end_temp[1] = 10   
+    print("astar temp ned",end_temp)
+    
+
+    if start1[0] < 0 and start1[1] < 0:
+        print("1")
+        start_temp[0] = (start1[0] + helper_num)
+        start_temp[1] = start1[1] + helper_num
+    elif start1[0] > 0 and start1[1] > 0:
+        print("2")
+        start_temp[0] = start1[0] + helper_num
+        start_temp[1] = start1[1] + helper_num        
+    elif start1[0] > 0 and start1[1] < 0:
+        print("3")
+        start_temp[1] = (start1[1] - helper_num)*-1
+        start_temp[0] = (start1[0] - helper_num)*-1
+    elif start1[0] < 0 and start1[1] > 0:
+        print("4")
+        start_temp[0] = (start1[0] - helper_num)*-1
+        start_temp[1] = start1[1] - helper_num
+    elif start1[0] == 0 and start1[1] == 0:
+        start_temp[0] = 10
+        start_temp[1] = 10   
+    print("astar temp start",start_temp) 
+    
+    start = (start_temp[0],start_temp[1])
+    end = (end_temp[0],end_temp[1])
+    
+    # Create start_temp and end_temp node
+    start_node = Node(None, start)
+    start_node.g = start_node.h = start_node.f = 0
+    end_node = Node(None, end)
+    end_node.g = end_node.h = end_node.f = 0
+
+    # Initialize both open and closed list
+    open_list = []
+    closed_list = []
+
+    # Add the start node
+    open_list.append(start_node)
+
+    # Loop until you find the end
+    while len(open_list) > 0:
+
+        # Get the current node
+        current_node = open_list[0]
+        current_index = 0
+        for index, item in enumerate(open_list):
+            if item.f < current_node.f:
+                current_node = item
+                current_index = index
+
+        # Pop current off open list, add to closed list
+        open_list.pop(current_index)
+        closed_list.append(current_node)
+
+        # Found the goal
+        if current_node == end_node:
+            path = []
+            current = current_node
+            while current is not None:
+                path.append(current.position)
+                current = current.parent
+            return path[::-1] # Return reversed path
+
+        # Generate children
+        children = []
+        for new_position in [(0, -1), (0, 1), (-1, 0), (1, 0), (-1, -1), (-1, 1), (1, -1), (1, 1)]: # Adjacent squares
+
+            # Get node position
+            node_position = (current_node.position[0] + new_position[0], current_node.position[1] + new_position[1])
+
+            # Make sure within range
+            if node_position[0] > (len(maze) - 1) or node_position[0] < 0 or node_position[1] > (len(maze[len(maze)-1]) -1) or node_position[1] < 0:
+                continue
+
+            # Make sure walkable terrain
+            if maze[node_position[0]][node_position[1]] != 0:
+                continue
+
+            # Create new node
+            new_node = Node(current_node, node_position)
+
+            # Append
+            children.append(new_node)
+
+        # Loop through children
+        for child in children:
+
+            # Child is on the closed list
+            for closed_child in closed_list:
+                if child == closed_child:
+                    continue
+
+            # Create the f, g, and h values
+            child.g = current_node.g + 1
+            child.h = ((child.position[0] - end_node.position[0]) ** 2) + ((child.position[1] - end_node.position[1]) ** 2)
+            child.f = child.g + child.h
+
+            # Child is already in the open list
+            for open_node in open_list:
+                if child == open_node and child.g > open_node.g:
+                    continue
+
+            # Add the child to the open list
+            open_list.append(child)
 
 #######################################################################
 '''
@@ -320,50 +501,135 @@ def PPot_Fn(Rob_pos,Goal_pos,Obs_pos_x,Obs_pos_y,PPot_Param,dsafe,Obs_len_x,Obs_
 
 #########################################################################################################
 #Simulation While Loop
+'''
+start = (0,0)
+end = (-9,-9)
+robot_path = astar(start, end)
 
-while 1 and not rospy.is_shutdown():
-    #New data aviable flag check - control runtime flag
-    if flag_cont == 1:
-        
-        #Obtaining of robot current position and velocity
-        Rob_pos = [position[0],position[1],position[3]]
-        Rob_vel = [velocity[0],velocity[5]]
-        
-        #PPot function call
-        F_xy_net = PPot_Fn(Rob_pos,Goal_Pos,Obs_Pos_x,Obs_Pos_y,PPot_Param,dsafe,Obs_len_x,Obs_len_y)
-        
-        #Calculation of distance and direction of movement
-        F_net = float(sqrt(F_xy_net[0]**2 + F_xy_net[1]**2))
-        F_net_direct = float(atan2(F_xy_net[1], F_xy_net[0]))
-        
-        #Calculate the desired robot position from the PPot
-        vel_c_x = vel_p_x + (F_xy_net[0]/rob_mass)*tau
-        vel_c_y = vel_p_y + (F_xy_net[1]/rob_mass)*tau
-        x_des = x_p + vel_c_x*tau
-        y_des = y_p + vel_c_y*tau
-        
-        #Writing the new destination and orientation Rob_pos_des variable
-        Rob_pos_des = [x_des,y_des,F_net_direct]
-        
-        #Update the previous robot states for the next iteration
-        vel_p_x = Rob_vel[0]*cos(Rob_pos[2])
-        vel_p_y = Rob_vel[0]*sin(Rob_pos[2])
-        x_p = Rob_pos[0]
-        y_p = Rob_pos[1]
-        flag_cont = 0
 
-    else:
-        Rob_pos_des = Rob_pos
-        
-    Des_Pos_msg.position.x = Rob_pos_des[0]
-    Des_Pos_msg.position.y = Rob_pos_des[1] #Writing quaternion values to destination msg
-    Des_Pos_msg.position.z = 0
-    [qx_des, qy_des, qz_des, qw_des] = euler_to_quaternion(Rob_pos_des[2], 0, 0) #Transformation of Yaw robot angle to quaternion orientation
-    Des_Pos_msg.orientation.x = qx_des  #Writing quaternion values to destination msg
-    Des_Pos_msg.orientation.y = qy_des  #Writing quaternion values to destination msg
-    Des_Pos_msg.orientation.z = qz_des  #Writing quaternion values to destination msg
-    Des_Pos_msg.orientation.w = qw_des  #Writing quaternion values to destination msg
+for touple, index in enumerate(robot_path): 
+    point_np = np.asarray(robot_path[touple])
+    point_np = rotPath(point_np)
+    point_np[0] = point_np[0] - 10
+    point_np[1] = point_np[1] - 10
+    robot_path[touple] = tuple(point_np)'''
+    
+#path_length = len(robot_path)
+flaga_astar = 1
+next_move = 0
+Temp_Goal = [0,0]
+Goal_Pos[0] = 0
+Goal_Pos[1] = 0
+path_length = 0
+Old_goal = [0,0] 
+robot_path = []
+while 1:
 
-    pub1.publish(Des_Pos_msg)	#Publish msg of destination position
-    rate.sleep()		        #Sleep with rate
-#########################################################################################################
+    next_move = 0
+    path_length = 0
+    robot_path.clear()
+    
+    print("Robot path CLEAR ",robot_path)
+
+    time.sleep(1)
+    
+    if Goal_Pos[0] != 0 and Goal_Pos[1] != 0 and Old_goal[0] != Goal_Pos[0] and Old_goal[1] != Goal_Pos[1]:
+        #start = (position[0],position[1])
+        #end = (Goal_Pos[0], Goal_Pos[1]) 
+        robot_path = astar((position[0],position[1]), (Goal_Pos[0], Goal_Pos[1]) )
+        path_length = len(robot_path)
+        Old_goal[0] = Goal_Pos[0]
+        Old_goal[1] = Goal_Pos[1]
+        print("sciezka robota",robot_path)
+        
+
+    print("start",(position[0],position[1]))
+    print("end",(Goal_Pos[0], Goal_Pos[1]))
+    
+
+    
+    next_move = 0
+        
+    
+    if path_length > 2:
+        for touple, index in enumerate(robot_path): 
+            point_np = np.asarray(robot_path[touple])
+            point_np = rotPath(point_np)
+            point_np[0] = point_np[0] - 10
+            point_np[1] = point_np[1] - 10
+            robot_path[touple] = tuple(point_np)  
+            print("sciezka robota po przelozeniu",robot_path)
+        while 1 and not rospy.is_shutdown():
+            #New data aviable flag check - control runtime flag
+            if flag_cont == 1:
+                
+                #Obtaining of robot current position and velocity
+                Rob_pos = [position[0],position[1],position[3]]
+                Rob_vel = [velocity[0],velocity[5]]
+                
+                if next_move < 1:
+                    Temp_Goal[0] = robot_path[next_move+1][0]
+                    Temp_Goal[1] = robot_path[next_move+1][1]
+                
+                print("Aktualna pozycja gola:", Temp_Goal)  
+                rob_goal_dist_x = abs(position[0] - Temp_Goal[0])
+                rob_goal_dist_y = abs(position[1] - Temp_Goal[1])
+                print("Pozycja",position)
+                
+                print(rob_goal_dist_x)
+                print(rob_goal_dist_y)
+                
+                print("nextmove",next_move)
+                print("path length", len(robot_path))
+                
+                if next_move >= len(robot_path) - 1:
+                    next_move = 0    
+                    break
+                
+                elif rob_goal_dist_x < 0.9 and rob_goal_dist_y < 0.9 and next_move != len(robot_path)-1:
+                    print("WSZEDŁEM")
+                    Temp_Goal[0] = robot_path[next_move+1][0]
+                    Temp_Goal[1] = robot_path[next_move+1][1]
+                    next_move = next_move + 1
+
+                    
+                #PPot function call
+                F_xy_net = PPot_Fn(Rob_pos,Temp_Goal,Obs_Pos_x,Obs_Pos_y,PPot_Param,dsafe,Obs_len_x,Obs_len_y)
+                
+                #Calculation of distance and direction of movement
+                F_net = float(sqrt(F_xy_net[0]**2 + F_xy_net[1]**2))
+                F_net_direct = float(atan2(F_xy_net[1], F_xy_net[0]))
+                
+                #Calculate the desired robot position from the PPot
+                vel_c_x = vel_p_x + (F_xy_net[0]/rob_mass)*tau
+                vel_c_y = vel_p_y + (F_xy_net[1]/rob_mass)*tau
+                x_des = x_p + vel_c_x*tau
+                y_des = y_p + vel_c_y*tau
+                
+                #Writing the new destination and orientation Rob_pos_des variable
+                Rob_pos_des = [x_des,y_des,F_net_direct]
+                
+                #Update the previous robot states for the next iteration
+                vel_p_x = Rob_vel[0]*cos(Rob_pos[2])
+                vel_p_y = Rob_vel[0]*sin(Rob_pos[2])
+                x_p = Rob_pos[0]
+                y_p = Rob_pos[1]
+                flag_cont = 0
+        
+            else:
+                Rob_pos_des = Rob_pos
+                
+            Des_Pos_msg.position.x = Rob_pos_des[0]
+            Des_Pos_msg.position.y = Rob_pos_des[1] #Writing quaternion values to destination msg
+            Des_Pos_msg.position.z = 0
+            [qx_des, qy_des, qz_des, qw_des] = euler_to_quaternion(Rob_pos_des[2], 0, 0) #Transformation of Yaw robot angle to quaternion orientation
+            Des_Pos_msg.orientation.x = qx_des  #Writing quaternion values to destination msg
+            Des_Pos_msg.orientation.y = qy_des  #Writing quaternion values to destination msg
+            Des_Pos_msg.orientation.z = qz_des  #Writing quaternion values to destination msg
+            Des_Pos_msg.orientation.w = qw_des  #Writing quaternion values to destination msg
+        
+            pub1.publish(Des_Pos_msg)	#Publish msg of destination position
+            rate.sleep()		        #Sleep with rate
+            
+    time.sleep(1)
+        #########################################################################################################
